@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --color-admin-bg: #0A0A0B;
+  --color-admin-surface: #141416;
+  --color-admin-primary: #8B5CF6; /* System Violet */
+  --color-admin-amber: #F59E0B;   /* Status/Pricing Gold */
+  --color-admin-border: rgba(255, 255, 255, 0.05);
+  --color-admin-muted: #71717A;
+  
+  --shadow-admin: 0 4px 20px 0 rgba(0, 0, 0, 0.5);
+}
+
+@layer base {
+  body {
+    @apply bg-admin-bg text-zinc-100 font-sans selection:bg-admin-primary selection:text-white;
+  }
+}
+
+@layer components {
+  .admin-card {
+    @apply bg-admin-surface border border-admin-border rounded-xl shadow-admin transition-all duration-200;
+  }
+  
+  .admin-card-hover {
+    @apply hover:border-zinc-700 hover:bg-zinc-900/50;
+  }
+
+  .status-badge {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider;
+  }
+
+  .btn-admin-primary {
+    @apply px-5 py-2 bg-admin-primary text-white font-bold rounded-lg hover:bg-violet-600 active:scale-95 transition-all;
+  }
+
+  .btn-admin-outline {
+    @apply px-5 py-2 border border-zinc-700 text-zinc-400 font-semibold rounded-lg hover:bg-zinc-800 active:scale-95 transition-all;
+  }
+}
+
+/* Custom Scrollbar for Admin */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-admin-bg;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-zinc-800 rounded-full hover:bg-zinc-700;
+}
