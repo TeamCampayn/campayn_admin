@@ -9,7 +9,6 @@ import {
   Loader2,
   Rocket,
   Instagram,
-  ArrowRight,
   X,
   ExternalLink,
   Trash2,
