@@ -11,7 +11,10 @@ import {
   Instagram,
   ArrowRight,
   X,
-  ExternalLink
+  ExternalLink,
+  Trash2,
+  Plus,
+  Search
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -58,6 +61,116 @@ const Launchpad: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [inspecting, setInspecting] = useState<CampaignRequest | null>(null);
   const [cpvRates, setCpvRates] = useState<Record<string, number>>({});
+  
+  // Manual squad management states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [processingCreatorId, setProcessingCreatorId] = useState<string | null>(null);
+
+  const handleSearchCreators = async (query: string) => {
+    setSearchQuery(query);
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    try {
+      const { data, error } = await supabase
+        .from('creators')
+        .select('*')
+        .or(`name.ilike.%${query}%,ig_handle.ilike.%${query}%`)
+        .limit(8);
+
+      if (!error && data) {
+        setSearchResults(data);
+      }
+    } catch (err) {
+      console.error('Error searching creators:', err);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleAddCreator = async (creator: any) => {
+    if (!inspecting) return;
+    
+    // Check if already in squad
+    const isAlreadyInSquad = inspecting.campaign_creators?.some(
+      (item: any) => String(item.creator_id) === String(creator.id)
+    );
+    if (isAlreadyInSquad) {
+      alert('This creator is already in the squad.');
+      return;
+    }
+
+    setProcessingCreatorId(creator.id);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/campaigns/${inspecting.id}/creators/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ creatorId: creator.id })
+      });
+
+      if (response.ok) {
+        await fetchRequests();
+        
+        // Add creator details to local inspect state list
+        const newCreatorItem = {
+          creator_id: creator.id,
+          creators: creator
+        };
+        setInspecting({
+          ...inspecting,
+          campaign_creators: [...(inspecting.campaign_creators || []), newCreatorItem]
+        });
+
+        // Clear search
+        setSearchQuery('');
+        setSearchResults([]);
+      } else {
+        const err = await response.json().catch(() => ({}));
+        alert(`Failed to add creator: ${err.error || response.statusText}`);
+      }
+    } catch (err: any) {
+      alert(`Error adding creator: ${err.message}`);
+    } finally {
+      setProcessingCreatorId(null);
+    }
+  };
+
+  const handleRemoveCreator = async (creatorId: string) => {
+    if (!inspecting) return;
+    if (!confirm('Are you sure you want to remove this creator from the squad?')) return;
+
+    setProcessingCreatorId(creatorId);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/campaigns/${inspecting.id}/creators/remove`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ creatorId })
+      });
+
+      if (response.ok) {
+        await fetchRequests();
+
+        // Update local modal state
+        setInspecting({
+          ...inspecting,
+          campaign_creators: (inspecting.campaign_creators || []).filter(
+            (item: any) => String(item.creator_id) !== String(creatorId)
+          )
+        });
+      } else {
+        const err = await response.json().catch(() => ({}));
+        alert(`Failed to remove creator: ${err.error || response.statusText}`);
+      }
+    } catch (err: any) {
+      alert(`Error removing creator: ${err.message}`);
+    } finally {
+      setProcessingCreatorId(null);
+    }
+  };
 
   const fetchRequests = async () => {
     // Fetch campaigns with brand info and ALL selected creators
@@ -384,7 +497,14 @@ const Launchpad: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                        <ArrowRight size={16} className="text-zinc-800 group-hover:text-admin-amber group-hover:translate-x-1 transition-all" />
+                        <button
+                          onClick={() => handleRemoveCreator(item.creator_id)}
+                          disabled={processingCreatorId === item.creator_id}
+                          className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                          title="Remove from squad"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -393,6 +513,67 @@ const Launchpad: React.FC = () => {
                     No creators selected for this campaign yet.
                   </div>
                 )}
+
+                {/* Add Creator Search & Add interface */}
+                <div className="mt-8 pt-6 border-t border-zinc-800">
+                  <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <Plus size={14} className="text-admin-amber" /> Add Creators to Squad
+                  </h4>
+                  <div className="relative">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                    <input
+                      type="text"
+                      placeholder="Search by creator name or Instagram handle..."
+                      value={searchQuery}
+                      onChange={(e) => handleSearchCreators(e.target.value)}
+                      className="w-full bg-zinc-900/80 border border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-admin-amber transition-all"
+                    />
+                    {searching && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 animate-spin" size={16} />
+                    )}
+                  </div>
+
+                  {searchResults.length > 0 && (
+                    <div className="mt-3 bg-zinc-950 border border-zinc-800 rounded-xl divide-y divide-zinc-900 max-h-[220px] overflow-y-auto">
+                      {searchResults.map((creator) => {
+                        const inSquad = inspecting.campaign_creators?.some(
+                          (item: any) => String(item.creator_id) === String(creator.id)
+                        );
+                        return (
+                          <div key={creator.id} className="p-3 flex items-center justify-between hover:bg-zinc-900/30 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center font-bold text-xs text-zinc-400">
+                                {(creator.name || creator.full_name)?.[0] || 'C'}
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-white">{creator.name || creator.full_name}</p>
+                                <p className="text-[10px] text-zinc-500">@{creator.ig_handle}</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleAddCreator(creator)}
+                              disabled={inSquad || processingCreatorId === creator.id}
+                              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
+                                inSquad
+                                  ? 'bg-zinc-900 text-zinc-600 border border-zinc-800/50 cursor-not-allowed'
+                                  : 'bg-admin-amber/10 text-admin-amber border border-admin-amber/20 hover:bg-admin-amber hover:text-black'
+                              }`}
+                            >
+                              {inSquad ? 'In Squad' : (
+                                <>
+                                  <Plus size={10} /> Add to Squad
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {searchQuery.trim().length >= 2 && searchResults.length === 0 && !searching && (
+                    <p className="text-xs text-zinc-600 mt-2 italic">No creators found matching "{searchQuery}"</p>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-8 pt-8 border-t border-admin-border">
