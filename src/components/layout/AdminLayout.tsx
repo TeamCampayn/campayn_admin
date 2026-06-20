@@ -7,7 +7,8 @@ import {
   Building2, 
   ShieldAlert,
   LogOut,
-  PieChart
+  PieChart,
+  Coins
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -56,6 +57,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           
           <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mt-6 mb-2 px-4">Financials</p>
           <NavItem to="/ledger" icon={<Wallet size={18} />} label="The Ledger" />
+          <NavItem to="/payouts" icon={<Coins size={18} />} label="Payout Approvals" />
         </nav>
 
         <div className="pt-6 border-t border-admin-border">

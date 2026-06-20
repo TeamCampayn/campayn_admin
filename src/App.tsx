@@ -6,6 +6,7 @@ import Creators from './pages/Creators';
 import Brands from './pages/Brands';
 import Analytics from './pages/Analytics';
 import Ledger from './pages/Ledger';
+import Payouts from './pages/Payouts';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
 const App: React.FC = () => {
@@ -41,6 +42,12 @@ const App: React.FC = () => {
           <Route path="/ledger" element={
             <AdminLayout>
               <Ledger />
+            </AdminLayout>
+          } />
+
+          <Route path="/payouts" element={
+            <AdminLayout>
+              <Payouts />
             </AdminLayout>
           } />
   
